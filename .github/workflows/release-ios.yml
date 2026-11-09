@@ -1,0 +1,27 @@
+name: Validate Taskflow iOS
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false @capacitor/core@^8 @capacitor/cli@^8 @capacitor/ios@^8
+      - run: npm run build
+      - run: |
+          npx cap add ios
+          npx cap sync ios
+      - name: Compile for iOS simulator without signing
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/ios-simulator-build" CODE_SIGNING_ALLOWED=NO build
+      - name: iOS signing notice
+        run: echo "::notice::Signed device IPA requires Apple Developer distribution certificate and provisioning profile. Simulator build is not an installable IPA."

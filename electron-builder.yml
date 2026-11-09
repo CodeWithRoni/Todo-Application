@@ -1,0 +1,27 @@
+appId: com.codewithroni.taskflow
+productName: Taskflow
+asar: true
+directories:
+  output: release-output
+files:
+  - dist/**/*
+  - electron/**/*
+  - package.json
+win:
+  target: [nsis, portable]
+  artifactName: Taskflow-${version}-Windows-${arch}.${ext}
+nsis:
+  artifactName: Taskflow-${version}-Windows-Setup-${arch}.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+portable:
+  artifactName: Taskflow-${version}-Windows-Portable-${arch}.${ext}
+mac:
+  category: public.app-category.productivity
+  identity: null
+  target: [dmg]
+  artifactName: Taskflow-${version}-macOS-${arch}.${ext}
+linux:
+  category: Utility
+  target: [deb]
+  artifactName: Taskflow-${version}-Linux-${arch}.${ext}
