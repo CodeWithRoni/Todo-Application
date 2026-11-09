@@ -45,3 +45,5 @@ Tasks are stored in your current browser's localStorage. They are not synchroniz
 ## Technology
 
 React 19 · Vite 7 · react-icons · CSS · Node.js built-in test runner
+
+GitHub Pages is deployed automatically after each push to `main` once Pages is enabled under repository settings.
