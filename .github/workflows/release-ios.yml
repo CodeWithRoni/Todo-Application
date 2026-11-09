@@ -1,9 +1,8 @@
 name: Validate Taskflow iOS
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
   push:
+    tags: ['v*']
     branches: [main]
     paths:
       - '.github/workflows/release-*.yml'
