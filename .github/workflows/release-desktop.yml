@@ -3,6 +3,15 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-*.yml'
+      - 'electron/**'
+      - 'electron-builder.yml'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'vite.config.js'
 permissions:
   contents: write
 jobs:
@@ -49,9 +58,12 @@ jobs:
             release-output/*.deb
           if-no-files-found: error
       - name: Attach to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v1.1.0
+          target_commitish: main
+          name: Taskflow v1.1.0 — Ocean Edition
           files: |
             release-output/*.exe
             release-output/*.dmg
