@@ -3,6 +3,15 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-*.yml'
+      - 'electron/**'
+      - 'electron-builder.yml'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'vite.config.js'
 permissions:
   contents: write
 jobs:
