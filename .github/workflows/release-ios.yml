@@ -34,6 +34,35 @@ jobs:
       - name: Compile iOS simulator
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/ios-simulator-build" CODE_SIGNING_ALLOWED=NO build
+      - name: Build unsigned iOS device application
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/ios-device-build" CODE_SIGNING_ALLOWED=NO build
+      - name: Package unsigned IPA for sideload signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/ios-device-build/Build/Products/Release-iphoneos/App.app"
+          test -d "$APP"
+          mkdir -p release-output "$RUNNER_TEMP/taskflow-unsigned/Payload"
+          cp -R "$APP" "$RUNNER_TEMP/taskflow-unsigned/Payload/Taskflow.app"
+          (cd "$RUNNER_TEMP/taskflow-unsigned" && zip -qry "$GITHUB_WORKSPACE/release-output/Taskflow-1.1.0-iOS-unsigned.ipa" Payload)
+          ls -lh release-output/*.ipa
+      - name: Upload unsigned IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: taskflow-ios-unsigned-ipa
+          path: release-output/Taskflow-1.1.0-iOS-unsigned.ipa
+          if-no-files-found: error
+      - name: Publish unsigned IPA to GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if gh release upload v1.1.0 release-output/Taskflow-1.1.0-iOS-unsigned.ipa --clobber --repo "$GITHUB_REPOSITORY"; then exit 0; fi
+            sleep $((attempt * 10))
+          done
+          exit 1
       - name: Build and export signed device IPA
         if: env.IOS_CERTIFICATE_BASE64 != '' && env.IOS_CERTIFICATE_PASSWORD != '' && env.IOS_PROVISIONING_PROFILE_BASE64 != '' && env.APPLE_TEAM_ID != ''
         run: bash scripts/sign-ios.sh
