@@ -1,0 +1,47 @@
+name: Publish Taskflow macOS Intel DMG
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-macos-intel.yml'
+permissions:
+  contents: write
+jobs:
+  macos-intel:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false electron@^39 electron-builder@^26
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Build macOS Intel DMG
+        run: npx electron-builder --mac --x64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: taskflow-macos-intel-dmg
+          path: release-output/*.dmg
+          if-no-files-found: error
+      - name: Publish DMG to v1.1.0 with retry
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if gh release upload v1.1.0 release-output/*.dmg --clobber --repo "$GITHUB_REPOSITORY"; then
+              echo "macOS Intel DMG published"
+              exit 0
+            fi
+            echo "Upload attempt $attempt failed; retrying..."
+            sleep $((attempt * 15))
+          done
+          exit 1

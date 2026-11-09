@@ -1,21 +1,24 @@
-name: Validate Taskflow iOS
+name: Build Taskflow iOS and signed IPA when credentials available
 on:
   workflow_dispatch:
   push:
     tags: ['v*']
     branches: [main]
     paths:
-      - '.github/workflows/release-*.yml'
-      - 'electron/**'
-      - 'electron-builder.yml'
+      - '.github/workflows/release-ios.yml'
+      - 'scripts/sign-ios.sh'
       - 'capacitor.config.json'
-      - 'package.json'
-      - 'vite.config.js'
 permissions:
   contents: write
 jobs:
   ios:
     runs-on: macos-latest
+    env:
+      IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      IOS_EXPORT_METHOD: ${{ vars.IOS_EXPORT_METHOD || 'ad-hoc' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,8 +31,24 @@ jobs:
       - run: |
           npx cap add ios
           npx cap sync ios
-      - name: Compile for iOS simulator without signing
+      - name: Compile iOS simulator
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/ios-simulator-build" CODE_SIGNING_ALLOWED=NO build
-      - name: iOS signing notice
-        run: echo "::notice::Signed device IPA requires Apple Developer distribution certificate and provisioning profile. Simulator build is not an installable IPA."
+      - name: Build and export signed device IPA
+        if: env.IOS_CERTIFICATE_BASE64 != '' && env.IOS_CERTIFICATE_PASSWORD != '' && env.IOS_PROVISIONING_PROFILE_BASE64 != '' && env.APPLE_TEAM_ID != ''
+        run: bash scripts/sign-ios.sh
+      - name: Upload signed IPA artifact
+        if: env.IOS_CERTIFICATE_BASE64 != '' && env.IOS_CERTIFICATE_PASSWORD != '' && env.IOS_PROVISIONING_PROFILE_BASE64 != '' && env.APPLE_TEAM_ID != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: taskflow-ios-signed-ipa
+          path: release-output/*.ipa
+          if-no-files-found: error
+      - name: Publish signed IPA to v1.1.0
+        if: env.IOS_CERTIFICATE_BASE64 != '' && env.IOS_CERTIFICATE_PASSWORD != '' && env.IOS_PROVISIONING_PROFILE_BASE64 != '' && env.APPLE_TEAM_ID != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload v1.1.0 release-output/*.ipa --clobber --repo "$GITHUB_REPOSITORY"
+      - name: Explain Apple signing requirement
+        if: env.IOS_CERTIFICATE_BASE64 == '' || env.IOS_CERTIFICATE_PASSWORD == '' || env.IOS_PROVISIONING_PROFILE_BASE64 == '' || env.APPLE_TEAM_ID == ''
+        run: echo "::notice::iOS simulator build passed; device IPA requires Apple Developer certificate, profile and Team ID as repository secrets."
