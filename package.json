@@ -32,5 +32,9 @@
     "vite": "^7.2.4"
   },
   "main": "electron/main.cjs",
-  "description": "Taskflow — responsive cross-platform task manager for Web, Windows, macOS, Linux, Android and iOS"
+  "description": "Taskflow — responsive cross-platform task manager for Web, Windows, macOS, Linux, Android and iOS",
+  "author": {
+    "name": "CodeWithRoni",
+    "email": "CodeWithRoni@users.noreply.github.com"
+  }
 }
